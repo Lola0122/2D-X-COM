@@ -65,7 +65,7 @@ export class TurnManager {
         this.enemyAct(active[0]);
     }
 
-    enemyAct(enemy) {
+    /*enemyAct(enemy) {
         const players = this.scene.unitManager.playerUnits;
         let closest = null, minDist = Infinity;
         players.forEach(p => {
@@ -77,7 +77,7 @@ export class TurnManager {
 
         const combat = this.scene.combatManager;
         if (minDist <= 1) {
-            combat.performRangedAttack(enemy, closest);
+            combat.performMeleeAttack(enemy, closest);
             enemy.endTurn();
             this.scene.time.delayedCall(300, () => this.processEnemyTurn());
             return;
@@ -114,12 +114,18 @@ export class TurnManager {
             enemy.useAction(1);
 
             if (enemy.hasActions() && this.gridDistance(enemy.tile, closest.tile) <= 1) {
-                combat.performRangedAttack(enemy, closest);
+                combat.performMeleeAttack(enemy, closest);
                 enemy.endTurn();
             }
         } else {
             enemy.endTurn();
         }
+        this.scene.time.delayedCall(300, () => this.processEnemyTurn());
+    }*/
+
+    enemyAct(enemy) {
+        this.scene.aiOrchestrator.processAIActions(enemy);
+        enemy.endTurn();
         this.scene.time.delayedCall(300, () => this.processEnemyTurn());
     }
 

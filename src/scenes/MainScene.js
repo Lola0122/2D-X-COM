@@ -12,6 +12,8 @@ import tileset from '../assets/tileset.png';
 import aling from '../assets/aling.png';
 import { FogOfWar } from '../vfx/FogOfWar.js';
 import { CombatVFX } from '../vfx/CombatVFX.js';
+import { AIOrchestrator } from '../AI/AIOrchestrator.js';
+import { WorldBlackboard } from '../services/worldBlackboard.js';
 
 export class MainScene extends Phaser.Scene {
     constructor() {
@@ -43,6 +45,7 @@ export class MainScene extends Phaser.Scene {
         this.createTextures();
 
 
+        this.blackboard = new WorldBlackboard(this);
         this.unitManager = new UnitManager(this);
         this.combatManager = new CombatManager(this, this.unitManager);
         this.combatVFX = new CombatVFX(this);
@@ -50,6 +53,8 @@ export class MainScene extends Phaser.Scene {
         this.targetManager = new TargetSelectionManager(this);
         this.turnManager = new TurnManager(this);
         this.uiManager = new UIManager(this);
+
+        this.aiOrchestrator = new AIOrchestrator(this);
 
         this.unitManager.createUnits(this.tilemap);
         this.createUI();
