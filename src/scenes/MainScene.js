@@ -13,13 +13,29 @@ import { UIManager } from '../managers/UIManager.js';
 import tileset from '../assets/tileset.png';
 import { FogOfWar } from '../vfx/FogOfWar.js';
 import { CombatVFX } from '../vfx/CombatVFX.js';
+import { AudioManager } from '../managers/AudioManager.js';
 
 export class MainScene extends Phaser.Scene {
     constructor() {
         super('MainScene');
+        this.isPaused = false;
+        this.pauseOverlay = null;
+        this.pauseMenuContainer = null;
+        this.escKey = null;
+        this.pauseButton = null;
+        this.pauseIcon = null;
+    }
+
+    init() {
+        
+    this.isPaused = false;
+        this.pauseOverlay = null;
+        this.pauseMenuContainer = null;
     }
 
     create() {
+        console.log('MainScene создана');
+        
         this.cameras.main.setBackgroundColor('#0f172a');
         this.phase = 'player';
         this.selectedUnit = null;
@@ -52,6 +68,95 @@ export class MainScene extends Phaser.Scene {
 
         this.unitManager.playerUnits.forEach(u => u.resetActions());
         this.uiManager.updateHelpText();
+
+        
+        AudioManager.playMusic();
+        
+        
+        this.createPauseButton();
+        
+        
+        if (this.escKey) {
+            this.escKey.destroy();
+        }
+        
+        
+        this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+        
+        
+        this.escKey.on('down', () => {
+            console.log('ESC нажата');
+            this.togglePause();
+        });
+    }
+
+    createPauseButton() {
+        
+        if (this.pauseButton) {
+            this.pauseButton.destroy();
+        }
+        if (this.pauseIcon) {
+            this.pauseIcon.destroy();
+        }
+        
+        
+        this.pauseButton = this.add.rectangle(1250, 30, 40, 40, 0xffffff, 0.8)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(1000);
+        
+        this.pauseIcon = this.add.text(1250, 30, '⏸', {
+            fontSize: '28px',
+            color: '#000000'
+        }).setOrigin(0.5).setDepth(1000);
+        
+        this.pauseButton.on('pointerdown', () => {
+            console.log('Кнопка паузы нажата');
+            this.togglePause();
+        });
+        
+        this.pauseButton.on('pointerover', () => this.pauseButton.setFillStyle(0xcccccc));
+        this.pauseButton.on('pointerout', () => this.pauseButton.setFillStyle(0xffffff));
+    }
+
+    togglePause() {
+        console.log('togglePause вызван, isPaused:', this.isPaused);
+        
+        if (!this.isPaused) {
+            this.isPaused = true;
+            this.scene.pause('MainScene');
+            
+            this.scene.launch('PauseMenu', {
+                mainScene: this
+            });
+        }
+    }
+
+    resumeGame() {
+        console.log('resumeGame вызван');
+        this.isPaused = false;
+        this.scene.resume('MainScene');
+    }
+
+    shutdown() {
+        console.log('MainScene выгружается');
+        
+        if (this.escKey) {
+            this.escKey.destroy();
+            this.escKey = null;
+        }
+        
+        if (this.pauseButton) {
+            this.pauseButton.destroy();
+            this.pauseButton = null;
+        }
+        if (this.pauseIcon) {
+            this.pauseIcon.destroy();
+            this.pauseIcon = null;
+        }
+        
+        this.time.removeAllEvents();
+        
+        this.tweens.killAll();
     }
 
     preload() {
@@ -72,13 +177,10 @@ export class MainScene extends Phaser.Scene {
         g.generateTexture('player_unit', 40, 40);
         g.clear(); g.fillStyle(0xef4444); g.fillCircle(20, 20, 20);
         g.generateTexture('enemy_unit', 40, 40);
-
-        // Маг
         g.clear();
         g.fillStyle(0xf593af);
         g.fillCircle(20, 20, 20);
         g.generateTexture('enemy_support_unit', 40, 40);
-
         g.destroy();
     }
 
@@ -86,7 +188,6 @@ export class MainScene extends Phaser.Scene {
         this.infoPanel = new InfoPanel(this);
         this.uiManager.createHelpText();
     }
-
 
     selectUnit(unit) {
         if (this.phase !== 'player') return;
