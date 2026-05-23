@@ -39,10 +39,12 @@ export class MovementManager {
             );
         }
 
-        if (unit.actionsLeft > 0) {
-            this.showMoveRange(unit);
-        } else {
-            this.scene.turnManager.endUnitTurn(unit);
+        if (unit.type === 'player') {
+            if (unit.actionsLeft > 0) {
+                this.showMoveRange(unit);
+            } else {
+                this.scene.turnManager.endUnitTurn(unit);
+            }
         }
     }
 

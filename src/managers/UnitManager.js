@@ -11,7 +11,7 @@ export class UnitManager {
     createUnits(tilemapService) {
         const toXY = (tile) => tilemapService.gridToWorld(tile.gridX, tile.gridY);
         const playerTiles = tilemapService.getSpawnTiles('left', 3);
-        const enemyTiles = tilemapService.getSpawnTiles('right', 4);
+        const enemyTiles = tilemapService.getSpawnTiles('right', 7);
 
         const playerDefs = [
             { name: 'Медик', hp: 100, attack: 10, defense: 8, accuracy: 70, role: 'medic', moveRange: 3 },
@@ -19,7 +19,10 @@ export class UnitManager {
             { name: 'Штурмовик', hp: 120, attack: 18, defense: 10, accuracy: 65, role: 'assault', moveRange: 2 },
         ];
         const enemyDefs = [
-            { name: 'Мелкий', hp: 55, ap: 2, attack: 10, defense: 3, accuracy: 60, role: 'swarm', moveRange: 5 },
+            { name: 'Алинг', hp: 30, attack: 20, defense: 10, accuracy: 60, role: "swarm", moveRange: 4 },
+            { name: 'Алинг', hp: 30, attack: 20, defense: 10, accuracy: 60, role: "swarm", moveRange: 4 },
+            { name: 'Алинг', hp: 30, attack: 20, defense: 10, accuracy: 60, role: "swarm", moveRange: 4 },
+            { name: 'Алинг', hp: 30, attack: 20, defense: 10, accuracy: 60, role: "swarm", moveRange: 4 },
             { name: 'Вражеский снайпер', hp: 70, ap: 2, attack: 16, defense: 4, accuracy: 85, role: 'sniper', moveRange: 3 },
             { name: 'Толстяк', hp: 130, ap: 1, attack: 22, defense: 8, accuracy: 60, role: 'brute', moveRange: 2 },
             { name: 'Маг', hp: 80, ap: 2, attack: 8, defense: 4, accuracy: 70, role: 'support', textureKey: 'enemy_support_unit', moveRange: 3 },

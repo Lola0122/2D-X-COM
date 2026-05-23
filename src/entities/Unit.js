@@ -11,14 +11,26 @@ export class Unit {
         this.accuracy = config.accuracy;
         this.moveRange = config.moveRange || 3;
         this.actionsLeft = 2;
-
+        this.tile = null;
+        this.previousTile = null;
+        this.lastAttacker = null;
         this.buffs = [];
         this.extraTurnCharges = 0;
-        this.tile = null;
-        
-        const texture = config.textureKey ?? (config.type === 'player' ? 'player_unit' : 'enemy_unit');
-        
+
+        let texture = config.textureKey ?? (config.type === 'player' ? 'player_unit' : 'enemy_unit');
+
+        if (config.role === "swarm") {
+            texture = "aling"
+        }
+
         this.sprite = scene.add.sprite(x, y, texture).setDepth(5);
+
+        if (config.role === "swarm") {
+            this.sprite.play('aling_idle');
+            this.sprite.displayWidth = 32;
+            this.sprite.displayHeight = 32;
+        }
+
         this.marker = scene.add.circle(x, y - 30, 8, 0xffd700).setDepth(6);
         this.marker.setVisible(false);
         this.nameLabel = scene.add.text(x, y - 45, config.name, {
@@ -58,7 +70,7 @@ export class Unit {
     }
 
     applyBuff(buff = {}) {
-        if (!buff.type) 
+        if (!buff.type)
             return null;
 
         const entry = {
@@ -91,7 +103,7 @@ export class Unit {
     }
 
     tickBuffs() {
-        if (this.buffs.length === 0) 
+        if (this.buffs.length === 0)
             return;
 
         const remaining = [];
@@ -128,59 +140,59 @@ export class Unit {
     }
 
     showBuffAnimation(buffType, value) {
-    const buffConfig = {
-        'speed': { text: '⚡', color: '#00ff00' },
-        'attack': { text: '⚔️', color: '#ff4444' },
-        'extra_turn': { text: '🔄', color: '#4488ff' },
-    };
+        const buffConfig = {
+            'speed': { text: '⚡', color: '#00ff00' },
+            'attack': { text: '⚔️', color: '#ff4444' },
+            'extra_turn': { text: '🔄', color: '#4488ff' },
+        };
 
-    const config = buffConfig[buffType];
-    
-    const buffText = this.scene.add.text(
-        this.sprite.x,
-        this.sprite.y - 60,
-        `${config.text}`,
-        {
-            fontSize: '25px',
-            fontFamily: 'Arial',
-            color: config.color,
-            stroke: '#000000',
-            strokeThickness: 3,
-            fontStyle: 'bold'
-        }
-    );
-    
-    buffText.setOrigin(0.5);
-    buffText.setDepth(100);
+        const config = buffConfig[buffType];
 
-    this.scene.tweens.add({
-        targets: buffText,
-        y: buffText.y - 40,
-        alpha: { from: 1, to: 0 },
-        scale: { from: 1.2, to: 0.8 },
-        duration: 1500,
-        ease: 'Power2',
-        onComplete: () => {
-            buffText.destroy();
-        }
-    });
+        const buffText = this.scene.add.text(
+            this.sprite.x,
+            this.sprite.y - 60,
+            `${config.text}`,
+            {
+                fontSize: '25px',
+                fontFamily: 'Arial',
+                color: config.color,
+                stroke: '#000000',
+                strokeThickness: 3,
+                fontStyle: 'bold'
+            }
+        );
 
-    this.scene.tweens.add({
-        targets: buffText,
-        scale: { from: 1.5, to: 1.2 },
-        duration: 200,
-        ease: 'Back.easeOut',
-        onComplete: () => {
-            this.scene.tweens.add({
-                targets: buffText,
-                scale: 1,
-                duration: 300,
-                ease: 'Power1'
-            });
-        }
-    });
-}
-    
+        buffText.setOrigin(0.5);
+        buffText.setDepth(100);
+
+        this.scene.tweens.add({
+            targets: buffText,
+            y: buffText.y - 40,
+            alpha: { from: 1, to: 0 },
+            scale: { from: 1.2, to: 0.8 },
+            duration: 1500,
+            ease: 'Power2',
+            onComplete: () => {
+                buffText.destroy();
+            }
+        });
+
+        this.scene.tweens.add({
+            targets: buffText,
+            scale: { from: 1.5, to: 1.2 },
+            duration: 200,
+            ease: 'Back.easeOut',
+            onComplete: () => {
+                this.scene.tweens.add({
+                    targets: buffText,
+                    scale: 1,
+                    duration: 300,
+                    ease: 'Power1'
+                });
+            }
+        });
+    }
+
     setupInteractivity() {
         this.sprite.setInteractive();
         this.sprite.on('pointerover', () => {
@@ -212,4 +224,32 @@ export class Unit {
         this.marker.setVisible(false);
         this.sprite.clearTint();
     }
+
+
+    get isAlive() {
+        return this.hp > 0;
+    }
+
+    moveTo(tile) {
+        this.setTile(tile);
+        const { x, y } = this.scene.tilemap.gridToWorld(tile.gridX, tile.gridY);
+        this.sprite.setPosition(x, y);
+        this.marker.setPosition(x, y - 30);
+        this.nameLabel.setPosition(x, y - 45);
+        this.useAction(1);
+        this.scene.infoPanel.update(this);
+    }
+
+    setTile(tile) {
+        if (this.tile && this.tile.unit === this) {
+            this.tile.unit = null;
+        }
+        this.previousTile = this.tile;
+        this.tile = tile;
+
+        if (tile) {
+            tile.unit = this;
+        }
+    }
+
 }

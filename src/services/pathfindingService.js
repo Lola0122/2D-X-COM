@@ -29,28 +29,66 @@ export class PathfindingService {
     }
 
 
-    findPath(start, end, maxSteps = Infinity, allowEndUnit = false) {
-        if (start === end) return [];
+    findPath(start, end, maxSteps = Infinity, ignoreOtherUnits = false) {
+
+        if (start === end) {
+            return [];
+        }
         const visited = new Map();
-        const queue = [{ tile: start, steps: 0, path: [] }];
+
+        const queue = [{
+            tile: start,
+            steps: 0,
+            path: []
+        }];
+
         visited.set(this._key(start), 0);
+
         while (queue.length > 0) {
+
             const { tile, steps, path } = queue.shift();
-            if (tile === end) return path;
+
+            if (tile === end) {
+                return path;
+            }
+
             for (const neighbor of this._getNeighbors(tile)) {
-                if (!neighbor.walkable) continue;
-                if (neighbor.unit && neighbor.unit !== start.unit
-                    && (!allowEndUnit || neighbor.unit !== end.unit)
-                ) continue;
+                if (!neighbor.walkable) {
+                    continue;
+                }
+
+                if (!ignoreOtherUnits &&
+                    neighbor.unit &&
+                    neighbor !== end &&
+                    neighbor.unit !== start.unit
+                ) {
+                    continue;
+                }
+
                 const newSteps = steps + 1;
-                if (newSteps > maxSteps) continue;
+
+                if (newSteps > maxSteps) {
+                    continue;
+                }
+
                 const key = this._key(neighbor);
-                if (!visited.has(key) || visited.get(key) > newSteps) {
+
+                if (
+                    !visited.has(key) ||
+                    visited.get(key) > newSteps
+                ) {
+
                     visited.set(key, newSteps);
-                    queue.push({ tile: neighbor, steps: newSteps, path: [...path, neighbor] });
+
+                    queue.push({
+                        tile: neighbor,
+                        steps: newSteps,
+                        path: [...path, neighbor]
+                    });
                 }
             }
         }
+
         return null;
     }
 
@@ -65,6 +103,11 @@ export class PathfindingService {
             }
         }
         return neighbors;
+    }
+
+    pathDistance(a, b) {
+        const path = this.findPath(a, b, Infinity, true);
+        return path ? path.length : Infinity;
     }
 
     _key(tile) { return `${tile.gridX},${tile.gridY}`; }

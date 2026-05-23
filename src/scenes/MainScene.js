@@ -11,8 +11,10 @@ import { TargetSelectionManager } from '../managers/TargetSelectionManager.js';
 import { TurnManager } from '../managers/TurnManager.js';
 import { UIManager } from '../managers/UIManager.js';
 import tileset from '../assets/tileset.png';
+import aling from '../assets/aling.png';
 import { FogOfWar } from '../vfx/FogOfWar.js';
 import { CombatVFX } from '../vfx/CombatVFX.js';
+import { AIOrchestrator } from '../AI/AIOrchestrator.js';
 import { AudioManager } from '../managers/AudioManager.js';
 
 export class MainScene extends Phaser.Scene {
@@ -27,15 +29,26 @@ export class MainScene extends Phaser.Scene {
     }
 
     init() {
-        
-    this.isPaused = false;
+
+        this.isPaused = false;
         this.pauseOverlay = null;
         this.pauseMenuContainer = null;
     }
 
     create() {
-        console.log('MainScene создана');
-        
+
+        this.anims.create({
+            key: 'aling_idle',
+
+            frames: this.anims.generateFrameNumbers('aling', {
+                start: 0,
+                end: 5
+            }),
+
+            frameRate: 8,
+            repeat: -1
+        });
+
         this.cameras.main.setBackgroundColor('#0f172a');
         this.phase = 'player';
         this.selectedUnit = null;
@@ -55,10 +68,12 @@ export class MainScene extends Phaser.Scene {
         this.turnManager = new TurnManager(this, this.blackboard);
         this.uiManager = new UIManager(this);
 
+        this.aiOrchestrator = new AIOrchestrator(this);
+
         this.unitManager.createUnits(this.tilemap);
 
         this.supportAI = new SupportEnemyAI(this.unitManager, this.blackboard);
-        
+
         this.createUI();
 
         this.fogOfWar = new FogOfWar(this, this.tilemap, { visionRange: 7 });
@@ -69,21 +84,21 @@ export class MainScene extends Phaser.Scene {
         this.unitManager.playerUnits.forEach(u => u.resetActions());
         this.uiManager.updateHelpText();
 
-        
+
         AudioManager.playMusic();
-        
-        
+
+
         this.createPauseButton();
-        
-        
+
+
         if (this.escKey) {
             this.escKey.destroy();
         }
-        
-        
+
+
         this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
-        
-        
+
+
         this.escKey.on('down', () => {
             console.log('ESC нажата');
             this.togglePause();
@@ -91,40 +106,40 @@ export class MainScene extends Phaser.Scene {
     }
 
     createPauseButton() {
-        
+
         if (this.pauseButton) {
             this.pauseButton.destroy();
         }
         if (this.pauseIcon) {
             this.pauseIcon.destroy();
         }
-        
-        
+
+
         this.pauseButton = this.add.rectangle(1250, 30, 40, 40, 0xffffff, 0.8)
             .setInteractive({ useHandCursor: true })
             .setDepth(1000);
-        
+
         this.pauseIcon = this.add.text(1250, 30, '⏸', {
             fontSize: '28px',
             color: '#000000'
         }).setOrigin(0.5).setDepth(1000);
-        
+
         this.pauseButton.on('pointerdown', () => {
             console.log('Кнопка паузы нажата');
             this.togglePause();
         });
-        
+
         this.pauseButton.on('pointerover', () => this.pauseButton.setFillStyle(0xcccccc));
         this.pauseButton.on('pointerout', () => this.pauseButton.setFillStyle(0xffffff));
     }
 
     togglePause() {
         console.log('togglePause вызван, isPaused:', this.isPaused);
-        
+
         if (!this.isPaused) {
             this.isPaused = true;
             this.scene.pause('MainScene');
-            
+
             this.scene.launch('PauseMenu', {
                 mainScene: this
             });
@@ -139,12 +154,12 @@ export class MainScene extends Phaser.Scene {
 
     shutdown() {
         console.log('MainScene выгружается');
-        
+
         if (this.escKey) {
             this.escKey.destroy();
             this.escKey = null;
         }
-        
+
         if (this.pauseButton) {
             this.pauseButton.destroy();
             this.pauseButton = null;
@@ -153,14 +168,18 @@ export class MainScene extends Phaser.Scene {
             this.pauseIcon.destroy();
             this.pauseIcon = null;
         }
-        
+
         this.time.removeAllEvents();
-        
+
         this.tweens.killAll();
     }
 
     preload() {
         this.load.spritesheet('tiles', tileset, { frameWidth: 40, frameHeight: 40 });
+        this.load.spritesheet('aling', aling, {
+            frameWidth: 184,
+            frameHeight: 168
+        });
     }
 
     createMap() {

@@ -1,5 +1,4 @@
 
-
 export class MathUtils {
 
     static sum(arr) {

@@ -8,6 +8,25 @@ export class WorldBlackboard {
         this.scene = scene;
     }
 
+    getUnits(alive = true) {
+        const units = this.scene.unitManager.allUnits ?? [];
+        return alive ? units.filter(unit => this.isAlive(unit)) : units;
+    }
+
+    getEnemyUnits(alive = true) {
+        const units = this.scene.unitManager.enemyUnits ?? [];
+        return alive ? units.filter(unit => this.isAlive(unit)) : units;
+    }
+
+    getPlayerUnits(alive = true) {
+        const units = this.scene.unitManager.playerUnits ?? [];
+        return alive ? units.filter(unit => this.isAlive(unit)) : units;
+    }
+
+    isAlive(unit) {
+        return unit && unit.hp > 0;
+    }
+
     getUnitTile(unit) {
         if (!unit)
             return null;
@@ -51,17 +70,30 @@ export class WorldBlackboard {
     }
 
     distanceBetweenUnits(a, b) {
-        return this.distanceBetweenTiles(this.getUnitTile(a), this.getUnitTile(b));
+        const posA = this.getUnitGridPosition(a);
+        const posB = this.getUnitGridPosition(b);
+
+        if (!posA || !posB)
+            return Infinity;
+
+        return MathUtils.gridDistance(posA, posB);
     }
 
     distanceBetweenTiles(t1, t2) {
-        const path = this.scene.pathfinder.findPath(t1, t2, Infinity, true);
+        const pos1 = { x: t1.gridX, y: t1.gridY };
+        const pos2 = { x: t2.gridX, y: t2.gridY };
 
-        if (!path)
-            return Infinity;
-
-        return path.length;
+        return MathUtils.gridDistance(pos1, pos2);
     }
+
+    getClosestPlayer(unit) {
+        return this.getClosestUnit(this.getPlayerUnits(), unit);
+    }
+
+    getClosestEnemy(unit) {
+        return this.getClosestUnit(this.getEnemyUnits(), unit);
+    }
+
 
     isEnemyUnitVisible(unit) {
         return this.scene.fogOfWar.isExplored(this.getUnitTile(unit));
@@ -87,7 +119,7 @@ export class WorldBlackboard {
 
         return best;
     }
-    
+
     getTheMostDistantTileFromPlayers(tiles, currentTile, checkRange) {
         return this._getTheMostDistantTileFrom(this.scene.unitManager.getPlayerUnits(), tiles, currentTile, checkRange);
     }
@@ -106,9 +138,9 @@ export class WorldBlackboard {
         for (const t of tiles) {
             const distancesSum = MathUtils.sum(
                 units.filter(unit => this.distanceBetweenTiles(this.getUnitTile(unit), currentTile) <= checkRange)
-                     .map(unit => this.distanceBetweenTiles(this.getUnitTile(unit), t))
+                    .map(unit => this.distanceBetweenTiles(this.getUnitTile(unit), t))
             );
-            
+
             if (distancesSum > maxDist) {
                 maxDist = distancesSum;
                 bestTile = t;
@@ -156,5 +188,10 @@ export class WorldBlackboard {
     getPlayerAtGrid(gx, gy) {
         const unit = this.getUnitAtGrid(gx, gy);
         return unit && unit.type === 'player' ? unit : null;
+    }
+
+    getMapCenter() {
+        const tilemap = this.scene.tilemap;
+        return tilemap.getTile(tilemap.COLS / 2, tilemap.ROWS / 2);
     }
 }

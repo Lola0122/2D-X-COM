@@ -15,6 +15,7 @@ export class CombatManager {
         if (Math.random() * 100 < hitChance) {
             const dmg = Math.max(1, attacker.attack - Math.floor(defender.defense * 0.3));
             defender.hp -= dmg;
+            defender.lastAttacker = attacker;
             this.showFloatingText(defender, `-${dmg}`, '#ef4444');
             if (defender.hp <= 0) this.unitManager.killUnit(defender);
         } else {
@@ -31,6 +32,7 @@ export class CombatManager {
         if (Math.random() * 100 < Phaser.Math.Clamp(baseAcc, 20, 99)) {
             const dmg = Math.max(2, attacker.attack - Math.floor(defender.defense * 0.2));
             defender.hp -= dmg;
+            defender.lastAttacker = attacker;
             this.showFloatingText(defender, `-${dmg}`, '#ef4444');
             if (defender.hp <= 0) this.unitManager.killUnit(defender);
         } else {
@@ -46,6 +48,7 @@ export class CombatManager {
         const dmg = Math.floor(attacker.attack * 1.5) - Math.floor(defender.defense * 0.3);
         const finalDmg = Math.max(2, dmg);
         defender.hp -= finalDmg;
+        defender.lastAttacker = attacker;
         this.showFloatingText(defender, `-${finalDmg}`, '#ef4444');
         if (defender.hp <= 0) this.unitManager.killUnit(defender);
     }
