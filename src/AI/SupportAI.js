@@ -13,7 +13,7 @@ export class SupportAI {
         const closest = closestData.unit;
         const distanceToClosest = closestData.distance;
 
-        if (!closest) { return; }
+        if (!closest || !closest.isAlive) { return; }
 
         if (distanceToClosest <= 3) {
             const tilesToGo = this.scene.pathfinder.getTilesInRange(enemy.tile, enemy.moveRange);

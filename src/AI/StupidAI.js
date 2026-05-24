@@ -13,7 +13,7 @@ export class StupidAI {
         const closest = closestData.unit;
         const distanceToClosest = closestData.distance;
 
-        if (!closest) { return; }
+        if (!closest || !closest.isAlive) { return; }
 
         const combat = this.scene.combatManager;
         if (distanceToClosest <= 1) {

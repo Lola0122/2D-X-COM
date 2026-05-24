@@ -27,12 +27,20 @@ export class TargetSelectionManager {
 
         const candidates = targetAllies ? this.scene.unitManager.getPlayerUnits() : this.scene.unitManager.getEnemyUnits();
         const tilemap = this.scene.tilemap;
+        const fogOfWar = this.scene.fogOfWar;
+        
         candidates.forEach(target => {
             if (target === unit || target.hp <= 0) return;
+            
             const dist = this.gridDistance(unit.tile, target.tile);
             if (dist === 0 || dist > maxRange) return;
             if (onlyAdjacent && dist > 1) return;
-
+            
+            // Проверяем Line of Sight для всех действий
+            let hasLoS = fogOfWar.hasLineOfSight(unit.tile, target.tile, maxRange);
+            
+            if (!hasLoS) return;
+            
             const { x, y } = tilemap.gridToWorld(target.tile.gridX, target.tile.gridY);
             const color = targetAllies ? 0x00ff00 : 0xff0000;
             const marker = this.scene.add.rectangle(x, y, 36, 36, color, 0.4).setDepth(2);

@@ -108,47 +108,4 @@ export class TurnManager {
         this.scene.time.delayedCall(delay, () => this.processEnemyTurn());
     }
 
-    // Поведение мага
-    processSupportTurn(enemy, distanceToClosestPlayer, closestPlayer) {
-        if (enemy.role === 'support') {
-
-            // Если игрок слишком близко
-            if (distanceToClosestPlayer <= 3) {
-                const tilesToGo = this.scene.pathfinder.getTilesInRange(enemy.tile, enemy.moveRange);
-
-                // Некуда убегать
-                if (tilesToGo.length === 0) {
-                    this.scene.supportAI.applyBestBuff(enemy);
-                    this.endEnemyTurn(enemy);
-                    return true;
-                }
-
-                const mostDistantFromPlayers = this.blackboard.getTheMostDistantTileFromPlayers(tilesToGo, enemy.tile, 7);
-
-                const newClosestPlayerInfo = this.blackboard.getClosestTile(this.scene.unitManager.getPlayerUnits().map(p => p.tile), mostDistantFromPlayers);
-
-                // Нет смысла убегать
-                if (newClosestPlayerInfo.distance <= distanceToClosestPlayer) {
-                    this.scene.supportAI.applyBestBuff(enemy);
-                    this.endEnemyTurn(enemy);
-                    return true;
-                }
-
-                enemy.moveTo(mostDistantFromPlayers);
-            }
-            // Если заметил игрока (пока захардкожено)
-            else if (distanceToClosestPlayer <= 7) {
-                this.scene.supportAI.applyBestBuff(enemy);
-            }
-            else {
-                this.skipEnemyTurn(enemy);
-                return true;
-            }
-
-            this.endEnemyTurn(enemy);
-            return true;
-        }
-
-        return false;
-    }
 }

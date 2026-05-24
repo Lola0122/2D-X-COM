@@ -101,65 +101,33 @@ export class FogOfWar {
         );
     }
 
-    computeVisibleTiles(playerUnits) {
+        computeVisibleTiles(playerUnits) {
         const visible = new Set();
 
         for (const unit of playerUnits) {
-            const startPos = this.tilemap.worldToGrid(
-                unit.sprite.x,
-                unit.sprite.y
-            );
-
-            const queue = [{
-                x: startPos.x,
-                y: startPos.y,
-                dist: 0
-            }];
-
-            const visited = new Set();
-            visited.add(`${startPos.x},${startPos.y}`);
-
-            while (queue.length > 0) {
-                const { x, y, dist } = queue.shift();
-
-                visible.add(`${x},${y}`);
-
-                if (dist >= this.visionRange) {
-                    continue;
-                }
-
-                const neighbors = [
-                    { x: x + 1, y },
-                    { x: x - 1, y },
-                    { x, y: y + 1 },
-                    { x, y: y - 1 }
-                ];
-
-                for (const n of neighbors) {
-                    const key = `${n.x},${n.y}`;
-
-                    if (visited.has(key)) {
-                        continue;
+            const startTile = unit.tile;
+            
+            // Добавляем тайл самого юнита
+            visible.add(`${startTile.gridX},${startTile.gridY}`);
+            
+            // Перебираем все тайлы в пределах visionRange
+            for (let dx = -this.visionRange; dx <= this.visionRange; dx++) {
+                for (let dy = -this.visionRange; dy <= this.visionRange; dy++) {
+                    const checkX = startTile.gridX + dx;
+                    const checkY = startTile.gridY + dy;
+                    
+                    // Проверяем, что тайл существует
+                    const targetTile = this.tilemap.getTile(checkX, checkY);
+                    if (!targetTile) continue;
+                    
+                    // Проверяем дистанцию (чебышевская)
+                    const distance = Math.max(Math.abs(dx), Math.abs(dy));
+                    if (distance > this.visionRange) continue;
+                    
+                    // Проверяем Line of Sight
+                    if (this.hasLineOfSight(startTile, targetTile, this.visionRange)) {
+                        visible.add(`${checkX},${checkY}`);
                     }
-
-                    const tile = this.tilemap.getTile(n.x, n.y);
-
-                    if (!tile) {
-                        continue;
-                    }
-
-                    visited.add(key);
-                    visible.add(key);
-
-                    if (this._isTileOpaque(tile)) {
-                        continue;
-                    }
-
-                    queue.push({
-                        x: n.x,
-                        y: n.y,
-                        dist: dist + 1
-                    });
                 }
             }
         }
@@ -262,6 +230,67 @@ export class FogOfWar {
         this._updateFogOverlay(visibleTiles);
     }
 
+    hasLineOfSight(startTile, endTile, visionRange = null) {
+        // Проверяем дистанцию между тайлами
+        const dx = Math.abs(startTile.gridX - endTile.gridX);
+        const dy = Math.abs(startTile.gridY - endTile.gridY);
+        const distance = Math.max(dx, dy);
+        
+        // Используем переданную дистанцию или стандартную из класса
+        const maxRange = visionRange !== null ? visionRange : this.visionRange;
+        
+        // Если дистанция больше дальности зрения - нет видимости
+        if (distance > maxRange) {
+            return false;
+        }
+        
+        // Если начальная и конечная позиция совпадают
+        if (startTile.gridX === endTile.gridX && startTile.gridY === endTile.gridY) {
+            return true;
+        }
+        
+        // Алгоритм Брезенхема для линии между центрами тайлов
+        let x0 = startTile.gridX;
+        let y0 = startTile.gridY;
+        let x1 = endTile.gridX;
+        let y1 = endTile.gridY;
+        
+        const deltaX = Math.abs(x1 - x0);
+        const deltaY = Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1;
+        const sy = y0 < y1 ? 1 : -1;
+        let err = deltaX - deltaY;
+        let x = x0;
+        let y = y0;
+        
+        while (true) {
+            // Пропускаем начальную и конечную позицию
+            if (!(x === startTile.gridX && y === startTile.gridY) && 
+                !(x === endTile.gridX && y === endTile.gridY)) {
+                
+                const tile = this.tilemap.getTile(x, y);
+                // Если тайл существует и непрозрачный - видимости нет
+                if (tile && this._isTileOpaque(tile)) {
+                    return false;
+                }
+            }
+            
+            if (x === x1 && y === y1) break;
+            
+            const e2 = 2 * err;
+            if (e2 > -deltaY) {
+                err -= deltaY;
+                x += sx;
+            }
+            if (e2 < deltaX) {
+                err += deltaX;
+                y += sy;
+            }
+        }
+        
+        return true;
+    }
+
     _updateUnitVisibility(allUnits, visibleTiles, selectedUnit = null) {
         for (const unit of allUnits) {
             if (unit.type === 'player') {
@@ -279,26 +308,39 @@ export class FogOfWar {
                 continue;
             }
 
-            const tilePos = this.tilemap.worldToGrid(
-                unit.sprite.x,
-                unit.sprite.y
-            );
+            const endTile = {
+                gridX: this.tilemap.worldToGrid(unit.sprite.x, unit.sprite.y).x,
+                gridY: this.tilemap.worldToGrid(unit.sprite.x, unit.sprite.y).y
+            };
 
-            const isVisible = visibleTiles.has(
-                `${tilePos.x},${tilePos.y}`
-            );
-
-            unit.sprite.setVisible(isVisible);
-            unit.nameLabel.setVisible(isVisible);
+            let hasDirectLoS = false;
+            
+            // Проверяем прямую видимость от каждого игрового юнита
+            for (const playerUnit of allUnits) {
+                if (playerUnit.type !== 'player') continue;
+                
+                const startTile = {
+                    gridX: this.tilemap.worldToGrid(playerUnit.sprite.x, playerUnit.sprite.y).x,
+                    gridY: this.tilemap.worldToGrid(playerUnit.sprite.x, playerUnit.sprite.y).y
+                };
+                
+                if (this.hasLineOfSight(startTile, endTile)) {
+                    hasDirectLoS = true;
+                    break;
+                }
+            }
+            
+            unit.sprite.setVisible(hasDirectLoS);
+            unit.nameLabel.setVisible(hasDirectLoS);
 
             if (unit.marker) {
                 unit.marker.setVisible(
-                    isVisible && selectedUnit === unit
+                    hasDirectLoS && selectedUnit === unit
                 );
             }
 
             if (unit.sprite.input) {
-                unit.sprite.input.enabled = isVisible;
+                unit.sprite.input.enabled = hasDirectLoS;
             }
         }
     }
