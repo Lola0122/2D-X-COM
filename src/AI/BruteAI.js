@@ -39,7 +39,7 @@ export class BruteAI {
 
             actionsLeft--;
 
-            if (actionsLeft > 0 && this.scene.blackboard.distanceBetweenTiles(enemy.tile, closest.tile) <= 1) {
+            if (actionsLeft > 0 && this.scene.blackboard.distanceBetweenTiles(finalTile, closest.tile) <= 1) {
                 plan.actions.push({type: 'attack', target: closest});
             }
             return plan;
@@ -50,7 +50,7 @@ export class BruteAI {
             const pathToPoint = pathfinder.findPath(enemy.tile, closest.tile, 7);
             if (pathToPoint && pathToPoint.length > 0)
             {
-                enemy.targettile = closest.tile
+                enemy.targettile = closest.tile;
             }
         }
 
@@ -65,7 +65,11 @@ export class BruteAI {
 
             if (actionsLeft > 0)
             {
+                // костыль, чтобы сохранить логику
+                const prevTile = enemy.tile;
+                enemy.setTile(finalTileOnWayToPoint);
                 const newPlan = this.getActionsPlan(enemy, actionsLeft);
+                enemy.setTile(prevTile);
                 if (newPlan)
                     plan.actions.push(...newPlan.actions);
             }

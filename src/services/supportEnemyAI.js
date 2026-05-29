@@ -13,9 +13,10 @@ const clamp01 = (value) => Math.min(1, Math.max(0, value));
  * Система принятия решений для поддерживающего врага (мага), который может накладывать баффы на союзников.
  */
 export class SupportEnemyAI {
-    constructor(unitManager, blackboard, cfg = {}) {
+    constructor(unitManager, blackboard, aiOrchestrator, cfg = {}) {
         this.unitManager = unitManager;
         this.blackboard = blackboard;
+        this.aiOrchestrator = aiOrchestrator;
         this.cfg = {
             neighborRange: cfg.neighborRange ?? 3,
             maxDistance: cfg.maxDistance ?? null,
@@ -117,6 +118,14 @@ export class SupportEnemyAI {
         };
     }
 
+    _isGoingToMove(actions) {
+        return actions.find(action => action.type === 'move');
+    }
+
+    _isGoingToAttack(actions) {
+        return actions.find(action => action.type === 'attack' || action.type === 'rangedAttack' || action.type === 'sniperShot');
+    }
+
     // Нужно балансить и улучшать
     _scoreCandidate(buffType, unit, features) {
         const maxDistance = this._getMaxDistance();
@@ -128,18 +137,25 @@ export class SupportEnemyAI {
         const allyNorm = clamp01(features.alliesNearby / 4);
         const roleBonus = this._roleBonus(buffType, unit.role);
 
-        // Надо проверять собирается ли куда-то идти
-        if (buffType === BUFF_TYPES.SPEED) {
+        const unitAI = this.aiOrchestrator.getAIForEnemy(unit);
+
+        if (!unitAI)
+            return -1;
+
+        const unitNextPlan = unitAI.getActionsPlan(unit, unit.actionsLeft);
+
+        if (!unitNextPlan)
+            return 0;
+
+        if (buffType === BUFF_TYPES.SPEED && this._isGoingToMove(unitNextPlan.actions)) {
             return clamp01(0.5 * moveRangeDeficitNorm + 0.3 * damageNorm + 0.1 * distNorm + 0.1 * roleBonus);
         }
 
-        // Надо проверять может ли атаковать на этом ходу
-        if (buffType === BUFF_TYPES.ATTACK) {
+        if (buffType === BUFF_TYPES.ATTACK && this._isGoingToAttack(unitNextPlan.actions)) {
             return clamp01(0.5 * damageNorm + 0.35 * closeNorm + 0.15 * roleBonus);
         }
 
-        // Если будет что-то делать
-        if (buffType === BUFF_TYPES.EXTRA_TURN) {
+        if (buffType === BUFF_TYPES.EXTRA_TURN && unitNextPlan.actions.length > 0) {
             return clamp01(
                 0.5 * damageNorm +
                 0.2 * closeNorm +

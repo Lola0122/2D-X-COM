@@ -14,20 +14,30 @@ export class AIOrchestrator {
     }
 
     processAIActions(enemy) {
-        for (const controller of this.aiControllers) {
 
-            //В canProcess каждый должен проверять именно свой тип противников
+        const chosenController = this.getAIForEnemy(enemy);
+
+        if (!chosenController)
+            return false;
+
+        // Все действия противника применяем прям в process, окончание 
+        // хода и задержка будут обработаны извне
+        chosenController.process(enemy);
+
+        return true;
+    }
+
+    getAIForEnemy(enemy) {
+        for (const controller of this.aiControllers) {
+            
+            // В canProcess каждый должен проверять именно свой тип противников
             if (!controller.canProcess(enemy)) {
                 continue;
             }
 
-            //Все действия противника применяем прям в process, окончание 
-            //хода и задержка будут обработаны извне
-            controller.process(enemy);
-
-            return true;
+            return controller;
         }
 
-        return false;
+        return null;
     }
 }

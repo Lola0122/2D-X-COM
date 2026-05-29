@@ -52,7 +52,7 @@ export class SniperAI {
                 
                 actionsLeft--;
 
-                const newEnemyTile = enemy.tile;
+                const newEnemyTile = bestTile;
                 if (this.scene.fogOfWar.hasLineOfSight(newEnemyTile, playerTile)) {
                     plan.actions.push({type: 'sniperShot', target: closestPlayer});
                 }

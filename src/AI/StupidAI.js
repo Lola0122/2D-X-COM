@@ -38,7 +38,7 @@ export class StupidAI {
 
             actionsLeft--;
 
-            if (actionsLeft > 0 && this.scene.blackboard.distanceBetweenTiles(enemy.tile, closest.tile) <= 1) {
+            if (actionsLeft > 0 && this.scene.blackboard.distanceBetweenTiles(finalTile, closest.tile) <= 1) {
                 plan.actions.push({type: 'attack', target: closest});
             }
             
