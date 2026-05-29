@@ -7,25 +7,26 @@ export class BruteAI {
         return enemy.role === 'brute';
     }
 
-    process(enemy) {
+    getActionsPlan(enemy, actionsLeft) {
+
         const closestData = this.scene.blackboard.getClosestPlayer(enemy);
+
+        if (!closestData) { return null; }
 
         const closest = closestData.unit;
         const distanceToClosest = closestData.distance;
 
-        if (!closest) { return; }
-
         const combat = this.scene.combatManager;
+    
         if (distanceToClosest <= 1) {
-            combat.performMeleeAttack(enemy, closest);
-            return;
+            return { actions: [{type: 'attack', target: closest}] };
         }
 
         const pathfinder = this.scene.pathfinder;
         const neighbours = pathfinder.getTilesInRange(closest.tile, 1)
             .filter(t => t.walkable && !t.unit);
         if (neighbours.length === 0) {
-            return;
+            return null;
         }
 
         const bestTile = this.scene.blackboard.getClosestTile(neighbours, enemy.tile).tile;
@@ -33,13 +34,15 @@ export class BruteAI {
         const path = pathfinder.findPath(enemy.tile, bestTile, enemy.moveRange);
         if (path && path.length > 0) {
             const finalTile = path[path.length - 1];
+            
+            const plan = { actions: [{type: 'move', tile: finalTile}] }
 
-            enemy.moveTo(finalTile);
+            actionsLeft--;
 
-            if (enemy.hasActions() && this.scene.blackboard.distanceBetweenTiles(enemy.tile, closest.tile) <= 1) {
-                combat.performMeleeAttack(enemy, closest);
+            if (actionsLeft > 0 && this.scene.blackboard.distanceBetweenTiles(enemy.tile, closest.tile) <= 1) {
+                plan.actions.push({type: 'attack', target: closest});
             }
-            return;
+            return plan;
         }
 
         if (distanceToClosest <= 7)
@@ -55,12 +58,74 @@ export class BruteAI {
         {
             const pathToPoint = pathfinder.findPath(enemy.tile, enemy.targettile, 7);
             const finalTileOnWayToPoint = pathToPoint[Math.min(enemy.moveRange,pathToPoint.length)-1];
-            enemy.moveTo(finalTileOnWayToPoint);
-            if (enemy.hasActions())
+            
+            const plan = { actions: [{type: 'move', tile: finalTileOnWayToPoint}] }
+
+            actionsLeft--;
+
+            if (actionsLeft > 0)
             {
-                this.process(enemy);
+                const newPlan = this.getActionsPlan(enemy, actionsLeft);
+                if (newPlan)
+                    plan.actions.push(...newPlan.actions);
             }
+            return plan;
+        }
+
+        return null;
+    }
+
+    process(enemy) {
+        
+        const plan = this.getActionsPlan(enemy, enemy.actionsLeft);
+
+        if (!plan)
             return;
+
+        this._executePlan(enemy, plan, this.scene, this.scene.combatManager);
+    }
+
+    _executePlan(enemy, plan, scene, combat) {
+
+        let currentActionIndex = 0;
+
+        executeNext();
+
+        function executeNext() {
+
+            if (currentActionIndex >= plan.actions.length) {
+                return;
+            }
+
+            const action =
+                plan.actions[currentActionIndex];
+
+            currentActionIndex++;
+
+            switch (action.type) {
+
+                case 'move':
+
+                    scene.movementManager.moveUnitTo(
+                        enemy,
+                        action.tile
+                    );
+
+                    executeNext();
+
+                    break;
+
+                case 'attack':
+
+                    combat.performMeleeAttack(
+                        enemy,
+                        action.target
+                    );
+
+                    executeNext();
+
+                    break;
+            }
         }
     }
 }

@@ -9,7 +9,7 @@ export class AlingAI {
         return enemy.role === 'swarm';
     }
 
-    process(enemy) {
+    getActionsPlan(enemy, actionsLeft) {
 
         const pathfinder = this.scene.pathfinder;
         const combat = this.scene.combatManager;
@@ -134,13 +134,6 @@ export class AlingAI {
                 });
             }
         }
-
-
-        if (!bestPlan) {
-            return;
-        }
-
-        executePlan(bestPlan, this.scene);
 
         function evaluatePlan(plan) {
 
@@ -283,6 +276,27 @@ export class AlingAI {
             }
         }
 
+        function isVisibleForPlayer(tile, player) {
+
+            const dist =
+                blackboard.distanceBetweenTiles(
+                    tile,
+                    player.tile
+                );
+
+            return dist <= 8;
+        }
+
+        return bestPlan;
+    }
+
+    process(enemy) {
+        const combat = this.scene.combatManager;
+
+        const bestPlan = this.getActionsPlan(enemy, enemy.actionsLeft);
+
+        if (bestPlan)
+            executePlan(bestPlan, this.scene);
 
         function executePlan(plan, scene) {
 
@@ -326,18 +340,6 @@ export class AlingAI {
                         break;
                 }
             }
-        }
-
-
-        function isVisibleForPlayer(tile, player) {
-
-            const dist =
-                blackboard.distanceBetweenTiles(
-                    tile,
-                    player.tile
-                );
-
-            return dist <= 8;
         }
     }
 
