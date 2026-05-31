@@ -16,10 +16,14 @@ concurrency:
 
 jobs:
   build:
+    if: github.ref == 'refs/heads/build'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: build
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -39,6 +43,7 @@ jobs:
           path: dist
 
   deploy:
+    if: github.ref == 'refs/heads/build'
     needs: build
     runs-on: ubuntu-latest
     environment:
