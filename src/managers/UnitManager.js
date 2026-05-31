@@ -33,10 +33,9 @@ export class UnitManager {
             allTiles.push(...allSpawnTiles);
         }
         
-        // Выбираем 10 случайных тайлов по всей карте
-        const selectedTiles = this.getRandomTilesFromAllMap(allTiles, 10);
+        const selectedTiles = this.getRandomTilesFromAllMap(allTiles, 8);
         
-        if (selectedTiles.length < 10) {
+        if (selectedTiles.length < 8) {
             console.warn('Недостаточно тайлов для всех юнитов');
             return;
         }
@@ -49,14 +48,15 @@ export class UnitManager {
         
         const enemyDefs = {
             alings: [
-                { name: 'Алинг', hp: 30, attack: 20, defense: 10, accuracy: 60, role: "swarm" },
-                { name: 'Алинг', hp: 30, attack: 20, defense: 10, accuracy: 60, role: "swarm" },
-                { name: 'Алинг', hp: 30, attack: 20, defense: 10, accuracy: 60, role: "swarm" },
-                { name: 'Алинг', hp: 30, attack: 20, defense: 10, accuracy: 60, role: "swarm" },
+                { name: 'Алинг', hp: 30, attack: 20, defense: 10, accuracy: 60, role: "swarm" }
             ],
             sniper: { name: 'Вражеский снайпер', hp: 70, ap: 2, attack: 16, defense: 4, accuracy: 85, role: 'sniper' },
             brute: { name: 'Толстяк', hp: 130, ap: 1, attack: 22, defense: 8, accuracy: 60, role: 'brute' },
             mage: { name: 'Маг', hp: 80, ap: 2, attack: 8, defense: 4, accuracy: 70, role: 'support', textureKey: 'enemy_support_unit' },
+            summoner: { name: 'Призыватель', hp: 60, ap: 2, attack: 6, defense: 4, accuracy: 60, role: 'summoner', moveRange: 2, maxSummonedUnits: 3,
+                minionRoles: ['swarm'],
+                minionConfigs: [{ name: 'Алинг (миньон)', hp: 25, attack: 15, defense: 8, accuracy: 50, role: "swarm", moveRange: 4 }]
+            }
         };
 
         const assignments = this.assignAllPositions(selectedTiles, playerDefs, enemyDefs);
@@ -101,7 +101,7 @@ export class UnitManager {
     }
 
     assignAllPositions(allTiles, playerDefs, enemyDefs) {
-        if (allTiles.length < 10) {
+        if (allTiles.length < 8) {
             console.warn('Недостаточно тайлов для всех юнитов');
             return [];
         }
@@ -357,7 +357,7 @@ export class UnitManager {
 
     assignEnemyPositions(positions, enemyDefs, usedTiles, playerAssignments) {
         const assignments = [];
-
+    
         // 1. Размещаем мага: позиции 2-3
         const magePositions = [...(positions[2] || []), ...(positions[3] || [])];
         const mageTile = this.getRandomTileFromPosition(magePositions, usedTiles);
@@ -365,7 +365,7 @@ export class UnitManager {
             assignments.push({ tile: mageTile, def: enemyDefs.mage });
             usedTiles.add(mageTile);
         }
-
+    
         // 2. Размещаем снайпера: позиции 2-4, приоритет укрытий
         const sniperPositions = this.sortByCoverPriority([
             ...(positions[2] || []), 
@@ -377,22 +377,52 @@ export class UnitManager {
             assignments.push({ tile: sniperTile, def: enemyDefs.sniper });
             usedTiles.add(sniperTile);
         }
-
+    
         // 3. Размещаем алингов: позиции 1-3
         const alingAssignments = this.assignAlingsPosition(positions, enemyDefs.alings, usedTiles, assignments, playerAssignments);
         assignments.push(...alingAssignments);
         alingAssignments.forEach(a => {
             if (a) usedTiles.add(a.tile);
         });
-
+    
         // 4. Размещаем толстяка: любая позиция
         const bruteTile = this.assignBrutePosition(positions, usedTiles, assignments, playerAssignments);
         if (bruteTile) {
             assignments.push({ tile: bruteTile, def: enemyDefs.brute });
             usedTiles.add(bruteTile);
         }
-
-        // 5. Проверяем, что маг находится в радиусе хотя бы 2 других врагов
+    
+        // 5. Размещаем саммонера (призывателя): позиции 2-3, предпочитает быть за другими врагами
+        const summonerPositions = this.sortByCoverPriority([
+            ...(positions[2] || []),
+            ...(positions[3] || [])
+        ]);
+        
+        // Фильтруем позиции, которые находятся за другими врагами (не на передовой)
+        const rearSummonerPositions = summonerPositions.filter(tile => {
+            const hasEnemyInFront = assignments.some(a => {
+                const dx = a.tile.gridX - tile.gridX;
+                const dy = a.tile.gridY - tile.gridY;
+                const distToPlayer = Math.abs(tile.gridX - (playerAssignments[0]?.tile?.gridX || 0)) + 
+                                    Math.abs(tile.gridY - (playerAssignments[0]?.tile?.gridY || 0));
+                const distEnemyToPlayer = Math.abs(a.tile.gridX - (playerAssignments[0]?.tile?.gridX || 0)) + 
+                                         Math.abs(a.tile.gridY - (playerAssignments[0]?.tile?.gridY || 0));
+                return distEnemyToPlayer < distToPlayer;
+            });
+            return hasEnemyInFront;
+        });
+        
+        const summonerTile = this.getRandomTileFromPosition(
+            rearSummonerPositions.length > 0 ? rearSummonerPositions : summonerPositions,
+            usedTiles
+        );
+        
+        if (summonerTile && enemyDefs.summoner) {
+            assignments.push({ tile: summonerTile, def: enemyDefs.summoner });
+            usedTiles.add(summonerTile);
+        }
+    
+        // 6. Проверяем, что маг находится в радиусе хотя бы 2 других врагов
         if (mageTile) {
             const mageAssignment = assignments.find(a => a.tile === mageTile);
             const otherEnemies = assignments.filter(a => a.tile !== mageTile && a.def.role !== 'support');
@@ -427,7 +457,7 @@ export class UnitManager {
                 }
             }
         }
-
+    
         return assignments.filter(a => a !== null);
     }
 
