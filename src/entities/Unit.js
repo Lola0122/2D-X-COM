@@ -61,6 +61,9 @@ export class Unit {
         if (this.scene.selectedUnit === this) {
             this.scene.infoPanel.update(this);
         }
+        if (tile.pickup && !tile.pickup.consumed) {
+            tile.pickup.applyTo(this);
+        }
     }
 
     setTile(tile) {
