@@ -45,7 +45,7 @@ export class PickupService {
         const pickup = new Pickup(this.scene, tile, type);
 
         const textureKey = type === 'medkit' ? 'pickup_medkit' : 'pickup_attack';
-        const sprite = this.scene.add.sprite(x, y, textureKey).setDepth(3);
+        const sprite = this.scene.add.sprite(x, y, textureKey).setDepth(1);
 
         this.scene.tweens.add({
             targets: sprite,
